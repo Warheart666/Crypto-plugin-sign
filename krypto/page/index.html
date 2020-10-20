@@ -1,0 +1,241 @@
+<html>
+
+<head>
+    <title> Пример использования КриптоПро ЭЦП Browser plug-in </title>
+    <meta name="robots" content="noindex, nofollow" charset="utf-8" />
+    <link href="demopage.css" rel="stylesheet" type="text/css" />
+    <script language="javascript" src="../cadesplugin_api.js"></script>
+    <script language="javascript" src="FileSaver.js"></script>
+    <script language="javascript" src="Code.js"></script>
+</head>
+
+<body>
+    <div id="min-width">
+        <div id="container">
+            <table>
+                <tr>
+                    <td>
+                        <div id="header">
+                            <a href="/" title="Главная">
+                                <img src="img/key.png" alt="Главная" class="logo" /></a>
+                            <h1>Проверка создания электронной подписи CAdES-BES</h1>
+                            <div id="promo"></div>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="mainContent">
+                            <div id="left-col">
+                                <div id="info">
+                                    <img id="info_img" src="Img/application_information.png" alt="" />
+                                    <div id="info_msg" style="text-align:center;">
+                                        <span id="PlugInEnabledTxt">Плагин не загружен</span>
+                                        <img src="img/red_dot.png" width="10" height="10" alt="Плагин не загружен"
+                                            id="PluginEnabledImg" />
+                                        <br>
+                                        <span id="PlugInVersionTxt" lang="ru"> </span>
+                                        <span id="CSPVersionTxt" lang="ru"> </span>
+                                        <br>
+                                        <span id="CSPNameTxt" lang="ru"> </span>
+                                    </div>
+                                    <div id="boxdiv" style="display:none">
+                                        <span id="errorarea">
+                                            У вас отсутствуют личные сертификаты. Вы можете
+                                            <a href="#" onClick="Common_RetrieveCertificate();" style="color:#0837ff">
+                                                получить</a>
+                                            сертификат от тестового УЦ, предварительно установив
+                                            <a href="https://testca.cryptopro.ru/certsrv/certnew.cer?ReqID=CACert&Renewal=1&Enc=bin"
+                                                style="color:#0837ff">корневой сертификат тестового УЦ</a>
+                                            в доверенные.
+                                        </span>
+                                    </div>
+                                </div>
+                                <p id="info_msg" name="CertificateTitle">Сертификат:</p>
+                                <div id="item_border" name="CertListBoxToHide">
+                                    <select size="4" name="CertListBox" id="CertListBox"
+                                        style="width:100%;resize:none;border:0;">
+                                    </select>
+                                </div>
+
+                                <div id="cert_info" style="display:none">
+                                    <h2>Информация о сертификате</h2>
+                                    <p class="info_field" id="subject"></p>
+                                    <p class="info_field" id="issuer"></p>
+                                    <p class="info_field" id="from"></p>
+                                    <p class="info_field" id="till"></p>
+                                    <p class="info_field" id="provname"></p>
+                                    <p class="info_field" id="privateKeyLink"></p>
+                                    <p class="info_field" id="algorithm"></p>
+                                    <p class="info_field" id="status"></p>
+                                    <p class="info_field" id="location"></p>
+                                </div>
+
+                                <p id="info_msg">Данные для подписи:</p>
+                                <div id="item_border">
+
+                                    <input id="uploadFile" name="uploadFile" type="file">
+
+                                </div>
+                                <p></p>
+                                <div class="layout">
+                                    <input id="DataToSignTxtBox" type="button" value="Подписать" name="DataToSignTxtBox"
+                                        onclick="run()" />
+                                </div>
+                                <p id="info_msg" name="SignatureTitle">Подпись:</p>
+                                <div id="item_border">
+                                    <textarea id="SignatureTxtBox" readonly
+                                        style="font-size:9pt;height:600px;width:100%;resize:none;border:0;">
+                                    </textarea>
+                                    <script language="javascript">
+                                        var txtDataToSign = "Hello World";
+                                        document.getElementById("DataToSignTxtBox").innerHTML = txtDataToSign;
+                                        document.getElementById("SignatureTxtBox").innerHTML = "";
+                                        var canPromise = !!window.Promise;
+
+                                        if (canPromise) {
+                                            cadesplugin.then(function () {
+                                                Common_CheckForPlugIn();
+                                            },
+                                                function (error) {
+                                                    document.getElementById('PluginEnabledImg').setAttribute("src", "Img/red_dot.png");
+                                                    document.getElementById('PlugInEnabledTxt').innerHTML = error;
+                                                }
+                                            );
+                                        } else {
+                                            window.addEventListener("message", function (event) {
+                                                if (event.data == "cadesplugin_loaded") {
+                                                    CheckForPlugIn_NPAPI();
+                                                } else if (event.data == "cadesplugin_load_error") {
+                                                    document.getElementById('PluginEnabledImg').setAttribute("src", "Img/red_dot.png");
+                                                    document.getElementById('PlugInEnabledTxt').innerHTML = "Плагин не загружен";
+                                                }
+                                            },
+                                                false);
+                                            window.postMessage("cadesplugin_echo_request", "*");
+                                        }
+
+                                    </script>
+                                </div>
+                            </div>
+                            <div id="right-col">
+                                <ul>
+                                    <li><a class="active"
+                                            href="https://cpdn.cryptopro.ru/default.asp?url=content/cades/plugin.html">Инструкция
+                                            по работе с плагином</a></li>
+                                    <li><a class="active" href="https://cryptopro.ru/products/csp/downloads">Скачать
+                                            КриптоПро CSP</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <script>
+            // async function toBase64(file) {
+            //     const reader = new FileReader();
+            //     reader.readAsDataURL(file);
+            //     return reader.result;
+            // };
+
+            function SignCreate(dataToSign) {
+                return new Promise(function (resolve, reject) {
+                    cadesplugin.async_spawn(function* (args) {
+                        try {
+
+                            var e = document.getElementById('CertListBox');
+                            var selectedCertID = e.selectedIndex;
+                            if (selectedCertID == -1) {
+                                alert("Select certificate");
+                                return;
+                            }
+
+
+                            var oStore = yield cadesplugin.CreateObjectAsync("CAdESCOM.Store");
+                            yield oStore.Open(cadesplugin.CAPICOM_CURRENT_USER_STORE, cadesplugin.CAPICOM_MY_STORE,
+                                cadesplugin.CAPICOM_STORE_OPEN_MAXIMUM_ALLOWED);
+
+
+                            var oCertificate = yield global_selectbox_container[selectedCertID];;
+                            var oSigner = yield cadesplugin.CreateObjectAsync("CAdESCOM.CPSigner");
+                            yield oSigner.propset_Certificate(oCertificate);
+                            yield oSigner.propset_CheckCertificate(true);
+                            yield oSigner.propset_TSAAddress("http://cryptopro.ru/tsp/");
+
+
+                            let oSignedData = yield cadesplugin.CreateObjectAsync("CAdESCOM.CadesSignedData");
+                            yield oSignedData.propset_ContentEncoding(cadesplugin.CADESCOM_BASE64_TO_BINARY);
+
+                            var oFile = document.getElementById("uploadFile").files[0];
+
+
+
+                            let buffer = yield oFile.arrayBuffer();
+
+
+                            let reader = new FileReader();
+
+                            // reader1.onload = ((theFile) => {
+                            //     return function (e) {
+                            //         var binaryData = oFile;
+                            //         //Converting Binary Data to base 64
+                            //         var base64String = window.btoa(binaryData);
+                            //         //showing file converted to base64
+                            //         // document.getElementById('base64').value = base64String;
+                            //         alert('File converted to base64 successfuly!\nCheck in Textarea');
+                            //     };
+                            // })(oFile);
+
+                            // Read in the image file as a data URL.
+                            let binaryString = "";
+                            let base64String = "";
+                            yield reader.onload = function () {
+                                binaryString = reader.result;
+                            }
+
+                            yield reader.readAsBinaryString(oFile);
+
+                            yield reader.onloadend = ((theFile) => {
+                                return function (e) {
+                                    base64String = window.btoa(binaryString);
+                                }
+                            })(binaryString)
+
+                            yield oSignedData.propset_ContentEncoding(cadesplugin.CADESCOM_BASE64_TO_BINARY);
+                            yield oSignedData.propset_Content(base64String);
+                            let sSignedMessage = yield oSignedData.SignCades(oSigner, cadesplugin.CADESCOM_CADES_BES, true);
+
+
+
+                            yield oStore.Close();
+                            resolve(sSignedMessage);
+
+                        }
+                        catch (e) {
+                            // args[3] = "Failed to create signature. Error: " + cadesplugin.getLastError(e)
+                            reject(e);
+                        }
+                    }, dataToSign, resolve, reject);
+                });
+            }
+
+            function run() {
+                SignCreate("Message")
+                    .then((result) => {
+                        document.getElementById("SignatureTxtBox").innerHTML = result;
+                        //const blob = new Blob(Array.from(result));
+                        //const blobUrl = URL.createObjectURL(blob);
+                        // window.URL.revokeObjectURL(blobUrl);
+                        // browser.downloads.download(blobUrl);
+
+                        var file = new File(Array.from(result), "test.txt");
+                        saveAs(file);
+
+                    })
+            }
+        </script>
+    </div>
+</body>
+
+</html>

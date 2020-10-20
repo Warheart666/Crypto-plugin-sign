@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title> asd</title>
+</head>
+
+<body>
+    <div id="min-width">
+        <div id="container">
+            <table>
+                <tr>
+                    <td>
+                        <div id="header">
+                            <h1>Проверка создания электронной подписи CAdES-BES</h1>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="mainContent">
+                            <div id="left-col">
+                                <div id="info">
+                                    <div id="info_msg" style="text-align:center;">
+                                        <span id="PlugInEnabledTxt">Плагин не загружен</span>
+                                        <img src="Img/red_dot.png" width="10" height="10" alt="Плагин не загружен" id="PluginEnabledImg"/>
+                                        <br>
+                                        <span id="PlugInVersionTxt" lang="ru"> </span>
+                                        <span id="CSPVersionTxt" lang="ru"> </span>
+                                        <br>
+                                        <span id="CSPNameTxt" lang="ru"> </span>
+                                    </div>
+                                    <div id="boxdiv" style="display:none">
+                                        <span id="errorarea">
+                                            У вас отсутствуют личные сертификаты. Вы можете
+                                            <a href="#" onClick="Common_RetrieveCertificate();" style="color:#0837ff">
+                                                получить</a>
+                                            сертификат от тестового УЦ, предварительно установив
+                                            <a href="https://testca.cryptopro.ru/certsrv/certnew.cer?ReqID=CACert&Renewal=1&Enc=bin"
+                                                style="color:#0837ff">корневой сертификат тестового УЦ</a>
+                                            в доверенные.
+                                        </span>
+                                    </div>
+                                </div>
+                                <p id="info_msg" name="CertificateTitle">Сертификат:</p>
+                                <div id="item_border" name="CertListBoxToHide">
+                                    <select size="4" name="CertListBox" id="CertListBox"
+                                        style="width:100%;resize:none;border:0;">
+                                    </select>
+                                </div>
+
+                                <div id="cert_info" style="display:none">
+                                    <h2>Информация о сертификате</h2>
+                                    <p class="info_field" id="subject"></p>
+                                    <p class="info_field" id="issuer"></p>
+                                    <p class="info_field" id="from"></p>
+                                    <p class="info_field" id="till"></p>
+                                    <p class="info_field" id="provname"></p>
+                                    <p class="info_field" id="privateKeyLink"></p>
+                                    <p class="info_field" id="algorithm"></p>
+                                    <p class="info_field" id="status"></p>
+                                    <p class="info_field" id="location"></p>
+                                </div>
+
+                                <p id="info_msg">Данные для подписи:</p>
+                                <div id="item_border">
+                                    <textarea id="DataToSignTxtBox" name="DataToSignTxtBox"
+                                        style="height:20px;width:100%;resize:none;border:0;">
+                                    </textarea>
+                                </div>
+                                <p></p>
+                                <div class="layout">
+                                    <input id="SignBtn" type="button" value="Подписать" name="SignData"
+                                        onclick="Common_SignCadesBES('CertListBox');" />
+                                </div>
+                                <p id="info_msg" name="SignatureTitle">Подпись:</p>
+
+                            </div>
+                        </div>
+        </div>
+        <script language="javascript" src="cadesplugin_api.js"></script>
+        <script>
+            Common_CheckForPlugIn();
+
+            function Common_CheckForPlugIn() {
+                cadesplugin.set_log_level(cadesplugin.LOG_LEVEL_DEBUG);
+                var canAsync = !!cadesplugin.CreateObjectAsync;
+                if (canAsync) {
+                        return CheckForPlugIn_Async();
+                } else {
+                    return CheckForPlugIn_NPAPI();
+                }
+            }
+
+            function GetLatestVersion_Async(CurrentPluginVersion) {
+                var xmlhttp = getXmlHttp();
+                xmlhttp.open("GET", "https://www.cryptopro.ru/sites/default/files/products/cades/latest_2_0.txt", true);
+                xmlhttp.onreadystatechange = function () {
+                    var PluginBaseVersion;
+                    if (xmlhttp.readyState == 4) {
+                        if (xmlhttp.status == 200) {
+                            PluginBaseVersion = xmlhttp.responseText;
+                            VersionCompare_Async(PluginBaseVersion, CurrentPluginVersion)
+                        }
+                    }
+                }
+                xmlhttp.send(null);
+            }
+
+            function CheckForPlugIn_Async() {
+                function VersionCompare_Async(StringVersion, ObjectVersion) {
+                    if (typeof (ObjectVersion) == "string")
+                        return -1;
+                    var arr = StringVersion.split('.');
+                    var isActualVersion = true;
+
+                    cadesplugin.async_spawn(function* () {
+                        if ((yield ObjectVersion.MajorVersion) == parseInt(arr[0])) {
+                            if ((yield ObjectVersion.MinorVersion) == parseInt(arr[1])) {
+                                if ((yield ObjectVersion.BuildVersion) == parseInt(arr[2])) {
+                                    isActualVersion = true;
+                                }
+                                else if ((yield ObjectVersion.BuildVersion) < parseInt(arr[2])) {
+                                    isActualVersion = false;
+                                }
+                            } else if ((yield ObjectVersion.MinorVersion) < parseInt(arr[1])) {
+                                isActualVersion = false;
+                            }
+                        } else if ((yield ObjectVersion.MajorVersion) < parseInt(arr[0])) {
+                            isActualVersion = false;
+                        }
+
+                        if (!isActualVersion) {
+                            document.getElementById('PluginEnabledImg').setAttribute("src", "Img/yellow_dot.png");
+                            document.getElementById('PlugInEnabledTxt').innerHTML = "Плагин загружен, но есть более свежая версия.";
+                        }
+                        document.getElementById('PlugInVersionTxt').innerHTML = "Версия плагина: " + (yield CurrentPluginVersion.toString());
+                        var oAbout = yield cadesplugin.CreateObjectAsync("CAdESCOM.About");
+                        var ver = yield oAbout.CSPVersion("", 80);
+                        var ret = (yield ver.MajorVersion) + "." + (yield ver.MinorVersion) + "." + (yield ver.BuildVersion);
+                        document.getElementById('CSPVersionTxt').innerHTML = "Версия криптопровайдера: " + ret;
+
+                        try {
+                            var sCSPName = yield oAbout.CSPName(80);
+                            document.getElementById('CSPNameTxt').innerHTML = "Криптопровайдер: " + sCSPName;
+                        }
+                        catch (err) { }
+                        return;
+                    });
+                }
+
+                function GetLatestVersion_Async(CurrentPluginVersion) {
+                    var xmlhttp = getXmlHttp();
+                    xmlhttp.open("GET", "https://www.cryptopro.ru/sites/default/files/products/cades/latest_2_0.txt", true);
+                    xmlhttp.onreadystatechange = function () {
+                        var PluginBaseVersion;
+                        if (xmlhttp.readyState == 4) {
+                            if (xmlhttp.status == 200) {
+                                PluginBaseVersion = xmlhttp.responseText;
+                                VersionCompare_Async(PluginBaseVersion, CurrentPluginVersion)
+                            }
+                        }
+                    }
+                    xmlhttp.send(null);
+                }
+
+                document.getElementById('PluginEnabledImg').setAttribute("src", "img/green_dot.png");
+                document.getElementById('PlugInEnabledTxt').innerHTML = "Плагин загружен.";
+                var CurrentPluginVersion;
+                cadesplugin.async_spawn(function* () {
+                    var oAbout = yield cadesplugin.CreateObjectAsync("CAdESCOM.About");
+                    CurrentPluginVersion = yield oAbout.PluginVersion;
+                    GetLatestVersion_Async(CurrentPluginVersion);
+                    if (location.pathname.indexOf("symalgo_sample.html") >= 0) {
+                        FillCertList_Async('CertListBox1');
+                        FillCertList_Async('CertListBox2');
+                    } else {
+                        FillCertList_Async('CertListBox');
+                    }
+                    // var txtDataToSign = "Hello World";
+                    // document.getElementById("DataToSignTxtBox").innerHTML = txtDataToSign;
+                    // document.getElementById("SignatureTxtBox").innerHTML = "";
+                }); //cadesplugin.async_spawn
+            }
+
+
+
+        </script>
+        </td>
+        </tr>
+        </table>
+    </div>
+    </div>
+</body>
+
+</html>
